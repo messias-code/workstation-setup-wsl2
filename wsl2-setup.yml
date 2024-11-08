@@ -1,0 +1,157 @@
+---
+# Playbook para configuração automatizada de ambiente WSL2 Ubuntu
+# Variáveis utilizadas:
+# - ansible_env.USER: Nome do usuário atual do sistema [`whoami`]
+# - ansible_user_id: ID do usuário atual do sistema [`id -u`]
+# - ansible_distribution_release: Nome da versão do Ubuntu (ex: focal, jammy) [`lsb_release -cs`]
+
+- name: Configuração Inicial WSL2 Ubuntu
+  hosts: localhost
+  tasks:
+    # =============================================
+    # Sistema Base
+    # Atualização do sistema e instalação de pacotes essenciais
+    # =============================================
+    
+    - name: Atualização do Sistema
+      become: true  # Executa com privilégios de superusuário
+      ansible.builtin.apt:
+        update_cache: yes  # Atualiza a lista de pacotes
+        upgrade: dist      # Realiza upgrade completo do sistema
+
+    - name: Instalação de Pacotes Base
+      become: true
+      ansible.builtin.apt:
+        name: '{{ item }}'           # Nome do pacote a ser instalado
+        install_recommends: yes      # Instala pacotes recomendados
+        state: present              # Garante que o pacote está instalado
+      loop:  # Lista de pacotes essenciais
+        - git                       # Controle de versão
+        - curl                      # Transferência de dados
+        - wget                      # Download de arquivos
+        - neovim                    # Editor de texto
+        - zsh                       # Shell alternativo
+        - texlive                   # Sistema TeX
+        - texlive-latex-extra       # Pacotes extras LaTeX
+        - texlive-xetex            # Suporte a XeTeX
+        - texlive-fonts-recommended # Fontes recomendadas
+        - texlive-plain-generic    # Pacotes genéricos
+        - ca-certificates          # Certificados SSL
+        - pandoc                   # Conversor de documentos
+        - dconf-cli               # Configuração do sistema
+        - gnupg                   # Criptografia
+        - python3-pip             # Gerenciador de pacotes Python
+
+    # =============================================
+    # ZSH e Oh-My-ZSH
+    # Configuração do shell ZSH e suas personalizações
+    # =============================================
+    
+    - name: Instalação Oh-My-ZSH
+      ansible.builtin.shell:
+        cmd: yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+      args:
+        # Evita reinstalação se já estiver presente
+        creates: "/home/{{ ansible_env.USER }}/.oh-my-zsh"
+
+    - name: Instalação Plugin ZSH Syntax Highlighting
+      ansible.builtin.git:
+        # Plugin para destacar sintaxe de comandos
+        repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+        dest: /home/{{ ansible_env.USER }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+
+    - name: Instalação Tema Powerlevel10k
+      ansible.builtin.git:
+        # Tema popular para ZSH com várias funcionalidades
+        repo: https://github.com/romkatv/powerlevel10k.git
+        dest: /home/{{ ansible_env.USER }}/.oh-my-zsh/custom/themes/powerlevel10k
+
+    - name: Configuração Shell Padrão
+      become: true
+      user:
+        name: '{{ ansible_env.USER }}'
+        shell: /bin/zsh             # Define ZSH como shell padrão
+
+    - name: Configuração Tema ZSH
+      lineinfile:
+        path: /home/{{ ansible_env.USER }}/.zshrc
+        regexp: '^ZSH_THEME='       # Procura linha que define o tema
+        line: 'ZSH_THEME="powerlevel10k/powerlevel10k"'  # Substitui pelo tema p10k
+
+    - name: Configuração Plugins ZSH
+      lineinfile:
+        path: /home/{{ ansible_env.USER }}/.zshrc
+        regexp: '^plugins='         # Procura linha que define plugins
+        line: 'plugins=(git zsh-syntax-highlighting)'  # Ativa plugins necessários
+
+    # =============================================
+    # Docker
+    # Instalação e configuração do Docker Engine
+    # =============================================
+    
+    - name: Verificação Chave Docker
+      stat:
+        path: /etc/apt/keyrings/docker.asc
+      register: docker_key          # Registra resultado para uso posterior
+      # Essa verificação evita tentativas desnecessárias de reinstalação
+
+    - name: Criação Diretório Docker
+      become: true
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'               # Permissões do diretório
+      when: not docker_key.stat.exists  # Só executa se a chave não existir
+      # Essa condição evita erros de criação de diretório já existente
+
+    - name: Instalação Chave Docker
+      become: true
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc | tee /etc/apt/sources.list.d/docker.list > /dev/null
+      when: not docker_key.stat.exists  # Só executa se a chave não existir
+      # Adiciona a chave GPG oficial do Docker para verificar pacotes
+
+    - name: Verificação Repositório Docker
+      stat:
+        path: /etc/apt/sources.list.d/docker.list
+      register: docker_repo         # Registra resultado para uso posterior
+      # Essa verificação evita adicionar repositório duplicado
+
+    - name: Configuração Repositório Docker
+      become: true
+      apt_repository:
+        # Adiciona repositório oficial do Docker para a versão do Ubuntu em uso
+        repo: 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable'
+        state: present
+        filename: docker
+      when: not docker_repo.stat.exists  # Só executa se o repo não existir
+      # Evita adicionar repositório duplicado
+
+    - name: Instalação Docker
+      become: true
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes          # Atualiza cache do apt antes da instalação
+      loop:  # Pacotes necessários para o Docker funcionar
+        - docker-ce                # Docker Engine
+        - docker-ce-cli            # CLI do Docker
+        - containerd.io            # Runtime de containers
+        - docker-buildx-plugin     # Plugin para build multiplataforma
+        - docker-compose-plugin    # Plugin do Docker Compose
+
+    - name: Criação Grupo Docker
+      become: true
+      ansible.builtin.group:
+        name: docker
+        state: present
+      # Grupo necessário para executar Docker sem sudo
+
+    - name: Configuração Permissões Docker
+      become: true
+      ansible.builtin.user:
+        name: "{{ ansible_user_id }}"
+        groups: docker              # Adiciona ao grupo Docker
+        append: yes                # Mantém grupos existentes
+      # Permite executar Docker sem sudo após reiniciar o shell
+...
