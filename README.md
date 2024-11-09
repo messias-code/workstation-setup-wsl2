@@ -161,6 +161,6 @@ Para suporte ou questões relacionadas ao projeto, entre em contato através dos
 [![LinkedIn Badge](https://img.shields.io/static/v1?style=for-the-badge&message=LinkedIn&color=0A66C2&logo=LinkedIn&logoColor=FFFFFF&label=)](https://www.linkedin.com/in/ihanmessias/)
 [![Instagram Badge](https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/messias.code)
 
-<p align="center">✉ Email de Projetos: messias.code@gmail.com</p>
+<p align="center">✉ Email de Projetos: messias.devops@gmail.com</p>
 
 <p align="center">© CodeAcademy</p>
