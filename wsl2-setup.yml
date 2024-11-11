@@ -154,4 +154,17 @@
         groups: docker              # Adiciona ao grupo Docker
         append: yes                # Mantém grupos existentes
       # Permite executar Docker sem sudo após reiniciar o shell
+
+      # ===========================================================
+      # Cloud CLI tools
+      # Instalação e configuração do azure-cli, aws-cli, e gcloud
+      # ===========================================================
+    
+    - name: Instalação Azure CLI
+      become: true
+      ansible.builtin.shell: |
+        curl -sL https://aka.ms/InstallAzureCLIDeb | bash 
+      args:
+        creates: /usr/bin/az  # Evita reinstalação se já existir
+      # Instala o Azure CLI usando o script oficial da Microsoft
 ...
