@@ -35,8 +35,8 @@ Este projeto nasceu da necessidade de otimizar o tempo de configuração de um n
 ├── assets
 │   └── CODE-ACADEMY-WSL2.png
 ├── LICENSE
-├── wsl2-setup.yml
-└── README.md
+├── README.md
+└── wsl2-setup.yml
 ```
 
 ## 🗺️ Roadmap
@@ -45,7 +45,10 @@ Este é um projeto em constante evolução que visa criar um ambiente completo p
 
 - [x] Oh-My-ZSH com Powerlevel10K e plugins
 - [x] Docker Engine e Docker Compose
-- [ ] Cloud CLI tools (aws-cli, azure-cli, gcloud)
+- [x] Cloud CLI tools (aws-cli, azure-cli, gcloud)
+   - [x] azure-cli
+   - [ ] aws-cli (_em desenvolvimento_)
+   - [ ] gcloud (_em desenvolvimento_)
 - [ ] Kubernetes tools (kubectl, helm, k9s)
 - [ ] Terraform e outras ferramentas IaC
 
@@ -68,6 +71,11 @@ O playbook realiza as seguintes configurações:
    - Instalação completa do Docker Engine
    - Configuração de permissões e grupos
    - Instalação do Docker Compose
+
+4. Cloud CLI tools
+   - Instalação do azure-cli
+   - Instalação do aws-cli (_em desenvolvimento_)
+   - Instalação do gcloud (_em desenvolvimento_)
 
 ## 📋 Pré-requisitos
 
@@ -97,8 +105,8 @@ sudo apt install ansible
 ### 2. Clonar o Repositório
 
 ```bash
-git clone https://github.com/seu-usuario/workspace-setup.git
-cd workspace-setup
+git clone https://github.com/messias-code/workstation-setup-wsl2
+cd workstation-setup-wsl2
 ```
 
 ## 🖥️ Configuração do Windows Terminal
