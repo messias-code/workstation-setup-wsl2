@@ -47,8 +47,8 @@ Este é um projeto em constante evolução que visa criar um ambiente completo p
 - [x] Docker Engine e Docker Compose
 - [x] Cloud CLI tools (aws-cli, azure-cli, gcloud)
    - [x] azure-cli
-   - [ ] aws-cli (_em desenvolvimento_)
-   - [ ] gcloud (_em desenvolvimento_)
+   - [x] aws-cli
+   - [x] gcloud
 - [ ] Kubernetes tools (kubectl, helm, k9s)
 - [ ] Terraform e outras ferramentas IaC
 
@@ -74,8 +74,8 @@ O playbook realiza as seguintes configurações:
 
 4. Cloud CLI tools
    - Instalação do azure-cli
-   - Instalação do aws-cli (_em desenvolvimento_)
-   - Instalação do gcloud (_em desenvolvimento_)
+   - Instalação do aws-cli
+   - Instalação do gcloud
 
 ## 📋 Pré-requisitos
 
