@@ -13,12 +13,11 @@
 #   - Setup completo do Docker e permissões
 #   - Instalação das principais CLIs de cloud (AWS, Azure, GCP)
 #
-# Variáveis do sistema:
-#   ansible_env.USER: Usuário atual do sistema (whoami)
-#   ansible_user_id: ID do usuário atual (id -u)
-#   ansible_distribution_release: Versão do Ubuntu (lsb_release -cs)
-#
 # Autor: Ihan Messias Nascimento dos Santos
+# Email: messias.devops@gmail.com
+# Linkedin: https://www.linkedin.com/in/ihanmessias/
+# Instagram: https://www.instagram.com/messias.code/
+# Github: https://github.com/messias-code
 # =============================================================================
 
 - name: PLAYBOOK WORKSTATION-SETUP-WSL2
