@@ -37,8 +37,8 @@ Este projeto nasceu da necessidade de otimizar o tempo de configuração de um n
 │   └── CODE-ACADEMY-WSL2.png
 ├── LICENSE
 ├── README.md
-├── uninstall-wsl2-setup.sh
-└── wsl2-setup.yml
+├── rollback-playbook.sh
+└── playbook.yml
 ```
 
 ## 🗺️ Roadmap
@@ -128,7 +128,7 @@ cd workstation-setup-wsl2
 Para executar o playbook:
 
 ```bash
-ansible-playbook wsl2-setup.yml --ask-become-pass
+ansible-playbook playbook.yml --ask-become-pass
 ```
 
 > **OBS: A senha é do seu usuário root**
@@ -152,7 +152,7 @@ bash
 2. Execute o script de reversão:
 
 ```bash
-bash uninstall-wsl2-setup.sh
+bash rollback-playbook.sh
 ```
 
 ## 🔍 Variáveis do Sistema
