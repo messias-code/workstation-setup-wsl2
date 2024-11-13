@@ -20,6 +20,7 @@ _**Feito com ❤️ para otimizar o tempo de desenvolvedores DevOps**_
 - [Instalação](#-instalação)
 - [Configuração do Windows Terminal](#️-configuração-do-windows-terminal)
 - [Uso](#-uso)
+- [Desfazendo as Alterações](#-desfazendo-as-alterações)
 - [Variáveis do Sistema](#-variáveis-do-sistema)
 - [Contribuição](#-contribuição)
 - [Licença](#-licença)
@@ -36,6 +37,7 @@ Este projeto nasceu da necessidade de otimizar o tempo de configuração de um n
 │   └── CODE-ACADEMY-WSL2.png
 ├── LICENSE
 ├── README.md
+├── uninstall-wsl2-setup.sh
 └── wsl2-setup.yml
 ```
 
@@ -46,11 +48,8 @@ Este é um projeto em constante evolução que visa criar um ambiente completo p
 - [x] Oh-My-ZSH com Powerlevel10K e plugins
 - [x] Docker Engine e Docker Compose
 - [x] Cloud CLI tools (aws-cli, azure-cli, gcloud)
-   - [x] azure-cli
-   - [x] aws-cli
-   - [x] gcloud
-- [ ] Kubernetes tools (kubectl, helm, k9s)
-- [ ] Terraform e outras ferramentas IaC
+- [ ] Kubernetes tools (kubectl, helm, k9s) - **Em breve**
+- [ ] Terraform e outras ferramentas IaC - **Em breve**
 
 > 🔄 *Este projeto está em desenvolvimento ativo. Novas features são adicionadas regularmente.*
 
@@ -139,6 +138,23 @@ Após a execução:
 2. Reinicie o terminal para que as alterações tenham efeito
 3. Configure o tema Powerlevel10k na primeira execução do ZSH
 
+
+## 🔄 Desfazendo as Alterações
+
+Se você precisar remover todas as configurações e ferramentas instaladas pelo playbook, siga os passos abaixo:
+
+1. Primeiro, mude para o shell bash para garantir que o processo de desinstalação ocorra corretamente:
+
+```bash
+bash
+```
+
+2. Execute o script de reversão:
+
+```bash
+bash uninstall-wsl2-setup.sh
+```
+
 ## 🔍 Variáveis do Sistema
 
 O Ansible utiliza "facts" para coletar informações do sistema. As principais variáveis utilizadas neste playbook são:
@@ -148,16 +164,6 @@ O Ansible utiliza "facts" para coletar informações do sistema. As principais v
 | `ansible_env.USER` | `whoami` ou `echo $USER` | Nome do usuário atual |
 | `ansible_user_id` | `id -u` | ID do usuário atual |
 | `ansible_distribution_release` | `lsb_release -cs` | Nome da versão do Ubuntu |
-
-### Uso de Facts no Ansible
-
-O Ansible coleta informações do sistema usando "facts". Para ver todas as informações disponíveis, execute:
-
-```bash
-ansible localhost -m setup
-```
-
-Este comando exibirá todos os "facts" disponíveis, incluindo variáveis usadas no playbook e outras informações. É uma ferramenta útil para descobrir quais dados estão disponíveis para personalizar seus playbooks, facilitando a adaptação ao seu modelo, caso desejado.
 
 ## 📝 Licença
 
