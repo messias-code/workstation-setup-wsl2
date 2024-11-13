@@ -36,10 +36,8 @@
         - texlive-xetex            # Suporte a XeTeX
         - texlive-fonts-recommended # Fontes recomendadas
         - texlive-plain-generic    # Pacotes genéricos
-        - ca-certificates          # Certificados SSL
         - pandoc                   # Conversor de documentos
         - dconf-cli               # Configuração do sistema
-        - gnupg                   # Criptografia
         - python3-pip             # Gerenciador de pacotes Python
 
     # =============================================
@@ -88,6 +86,15 @@
     # Docker
     # Instalação e configuração do Docker Engine
     # =============================================
+
+    - name: Instalação de Dependências Docker
+      become: true                 # Executa com privilégios de superusuário
+      ansible.builtin.apt:
+        name: "{{ item }}"         # Instala cada item da lista de dependências
+        state: present            # Garante que os pacotes estejam instalados
+      loop:                        # Lista de pacotes necessários para o Docker
+        - ca-certificates          # Certificados SSL para conexões seguras
+        - gnupg                    # Gerenciamento de chaves GPG para verificar assinaturas
     
     - name: Verificação Chave Docker
       stat:
@@ -155,10 +162,10 @@
         append: yes                # Mantém grupos existentes
       # Permite executar Docker sem sudo após reiniciar o shell
 
-      # ===========================================================
-      # Cloud CLI tools
-      # Instalação e configuração do azure-cli, aws-cli, e gcloud
-      # ===========================================================
+    # ===========================================================
+    # Cloud CLI tools
+    # Instalação do AZURE-CLI
+    # ===========================================================
     
     - name: Instalação Azure CLI
       become: true
@@ -167,4 +174,42 @@
       args:
         creates: /usr/bin/az  # Evita reinstalação se já existir
       # Instala o Azure CLI usando o script oficial da Microsoft
+   
+    # ===========================================================
+    # Cloud CLI tools
+    # Instalação do AWS-CLI
+    # ===========================================================
+
+    - name: Verificar instalação AWS CLI
+      ansible.builtin.stat:
+        path: /usr/local/bin/aws    # Caminho do binário AWS CLI
+      register: aws_cli_check       # Registra o resultado para uso posterior
+      # Verifica se o AWS CLI já está instalado antes de prosseguir com a instalação
+
+    - name: Download AWS CLI
+      become: true                  # Executa com privilégios de superusuário
+      ansible.builtin.get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  # URL oficial do instalador
+        dest: "/tmp/awscliv2.zip"   # Local onde será salvo o arquivo
+        mode: '0644'                # Permissões do arquivo
+      when: not aws_cli_check.stat.exists  # Só executa se AWS CLI não estiver instalado
+      # Faz o download do instalador oficial da AWS CLI v2 em formato ZIP
+
+    - name: Descompactar AWS CLI
+      become: true
+      ansible.builtin.unarchive:
+        src: "/tmp/awscliv2.zip"    # Arquivo ZIP baixado
+        dest: "/tmp"                # Diretório de destino
+        remote_src: yes            # Indica que o arquivo está no host remoto
+      args:
+        creates: /tmp/aws          # Evita descompactar se o diretório já existir
+      when: not aws_cli_check.stat.exists
+      # Extrai os arquivos do instalador AWS CLI para instalação
+
+    - name: Instalar AWS CLI
+      become: true
+      ansible.builtin.command:
+        cmd: "/tmp/aws/install"     # Comando de instalação
+      when: not aws_cli_check.stat.exists
+      # Executa o script de instalação da AWS CLI somente se não estiver instalado
 ...
