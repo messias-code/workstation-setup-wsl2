@@ -1,215 +1,262 @@
 ---
-# Playbook para configuração automatizada de ambiente WSL2 Ubuntu
-# Variáveis utilizadas:
-# - ansible_env.USER: Nome do usuário atual do sistema [`whoami`]
-# - ansible_user_id: ID do usuário atual do sistema [`id -u`]
-# - ansible_distribution_release: Nome da versão do Ubuntu (ex: focal, jammy) [`lsb_release -cs`]
+# =============================================================================
+# PLAYBOOK: Configuração Automatizada de Ambiente WSL2 Ubuntu
+# =============================================================================
+# Descrição:
+#   Este playbook realiza a configuração automatizada de um ambiente de 
+#   desenvolvimento profissional no WSL2 Ubuntu, implementando ferramentas
+#   essenciais para DevOps e Cloud Computing.
+#
+# Funcionalidades:
+#   - Configuração do sistema base
+#   - Instalação e configuração do ZSH com Oh-My-ZSH
+#   - Setup completo do Docker e permissões
+#   - Instalação das principais CLIs de cloud (AWS, Azure, GCP)
+#
+# Variáveis do sistema:
+#   ansible_env.USER: Usuário atual do sistema (whoami)
+#   ansible_user_id: ID do usuário atual (id -u)
+#   ansible_distribution_release: Versão do Ubuntu (lsb_release -cs)
+#
+# Autor: Ihan Messias Nascimento dos Santos
+# =============================================================================
 
-- name: Configuração Inicial WSL2 Ubuntu
+- name: PLAYBOOK WORKSTATION-SETUP-WSL2
   hosts: localhost
   tasks:
-    # =============================================
-    # Sistema Base
-    # Atualização do sistema e instalação de pacotes essenciais
-    # =============================================
+    # =============================================================================
+    # SEÇÃO 1: CONFIGURAÇÃO DO SISTEMA BASE
+    # =============================================================================
     
     - name: Atualização do Sistema
-      become: true  # Executa com privilégios de superusuário
+      become: true
       ansible.builtin.apt:
-        update_cache: yes  # Atualiza a lista de pacotes
-        upgrade: dist      # Realiza upgrade completo do sistema
+        update_cache: yes
+        upgrade: yes
 
     - name: Instalação de Pacotes Base
       become: true
       ansible.builtin.apt:
-        name: '{{ item }}'           # Nome do pacote a ser instalado
-        install_recommends: yes      # Instala pacotes recomendados
-        state: present              # Garante que o pacote está instalado
-      loop:  # Lista de pacotes essenciais
-        - git                       # Controle de versão
-        - curl                      # Transferência de dados
-        - wget                      # Download de arquivos
-        - neovim                    # Editor de texto
-        - zsh                       # Shell alternativo
-        - texlive                   # Sistema TeX
-        - texlive-latex-extra       # Pacotes extras LaTeX
-        - texlive-xetex            # Suporte a XeTeX
-        - texlive-fonts-recommended # Fontes recomendadas
-        - texlive-plain-generic    # Pacotes genéricos
-        - pandoc                   # Conversor de documentos
-        - dconf-cli               # Configuração do sistema
-        - python3-pip             # Gerenciador de pacotes Python
+        name: '{{ item }}'
+        install_recommends: yes
+        state: present
+      loop:
+        - git
+        - curl
+        - wget
+        - neovim
+        - zsh
+        - texlive
+        - texlive-latex-extra
+        - texlive-xetex
+        - pandoc
+        - dconf-cli
+        - python3-pip
 
-    # =============================================
-    # ZSH e Oh-My-ZSH
-    # Configuração do shell ZSH e suas personalizações
-    # =============================================
+    # =============================================================================
+    # SEÇÃO 2: ZSH e Oh-My-ZSH
+    # =============================================================================
     
+    - name: Verificar instalação Oh-My-ZSH
+      ansible.builtin.stat:
+        path: "/home/{{ ansible_env.USER }}/.oh-my-zsh"
+      register: ohmyzsh_check
+
     - name: Instalação Oh-My-ZSH
       ansible.builtin.shell:
-        cmd: yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-      args:
-        # Evita reinstalação se já estiver presente
-        creates: "/home/{{ ansible_env.USER }}/.oh-my-zsh"
+        cmd: |
+          # Instalação automatizada do Oh-My-ZSH
+          # - 'yes |': Responde automaticamente todas as prompts
+          # - 'sh -c': Executa comando em novo shell
+          # - 'curl -fsSL': Download silencioso do script
+          yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+      when: not ohmyzsh_check.stat.exists
+
+    - name: Verificar Plugin ZSH Syntax Highlighting
+      ansible.builtin.stat:
+        path: "/home/{{ ansible_env.USER }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+      register: syntax_highlight_check
 
     - name: Instalação Plugin ZSH Syntax Highlighting
       ansible.builtin.git:
-        # Plugin para destacar sintaxe de comandos
         repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
         dest: /home/{{ ansible_env.USER }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+      when: not syntax_highlight_check.stat.exists
+
+    - name: Verificar Tema Powerlevel10k
+      ansible.builtin.stat:
+        path: "/home/{{ ansible_env.USER }}/.oh-my-zsh/custom/themes/powerlevel10k"
+      register: p10k_check
 
     - name: Instalação Tema Powerlevel10k
       ansible.builtin.git:
-        # Tema popular para ZSH com várias funcionalidades
         repo: https://github.com/romkatv/powerlevel10k.git
         dest: /home/{{ ansible_env.USER }}/.oh-my-zsh/custom/themes/powerlevel10k
+      when: not p10k_check.stat.exists
+
+    - name: Verificar Shell Atual
+      ansible.builtin.shell: echo $SHELL
+      register: current_shell
+      changed_when: false
 
     - name: Configuração Shell Padrão
       become: true
       user:
         name: '{{ ansible_env.USER }}'
-        shell: /bin/zsh             # Define ZSH como shell padrão
+        shell: /bin/zsh
+      when: current_shell.stdout != '/bin/zsh'
 
     - name: Configuração Tema ZSH
       lineinfile:
         path: /home/{{ ansible_env.USER }}/.zshrc
-        regexp: '^ZSH_THEME='       # Procura linha que define o tema
-        line: 'ZSH_THEME="powerlevel10k/powerlevel10k"'  # Substitui pelo tema p10k
+        regexp: '^ZSH_THEME='
+        line: 'ZSH_THEME="powerlevel10k/powerlevel10k"'
 
     - name: Configuração Plugins ZSH
       lineinfile:
         path: /home/{{ ansible_env.USER }}/.zshrc
-        regexp: '^plugins='         # Procura linha que define plugins
-        line: 'plugins=(git zsh-syntax-highlighting)'  # Ativa plugins necessários
+        regexp: '^plugins='
+        line: 'plugins=(git zsh-syntax-highlighting)'
 
-    # =============================================
-    # Docker
-    # Instalação e configuração do Docker Engine
-    # =============================================
+    # =============================================================================
+    # SEÇÃO 3: Docker Engine e Docker Compose
+    # =============================================================================
 
-    - name: Instalação de Dependências Docker
-      become: true                 # Executa com privilégios de superusuário
-      ansible.builtin.apt:
-        name: "{{ item }}"         # Instala cada item da lista de dependências
-        state: present            # Garante que os pacotes estejam instalados
-      loop:                        # Lista de pacotes necessários para o Docker
-        - ca-certificates          # Certificados SSL para conexões seguras
-        - gnupg                    # Gerenciamento de chaves GPG para verificar assinaturas
-    
     - name: Verificação Chave Docker
       stat:
         path: /etc/apt/keyrings/docker.asc
-      register: docker_key          # Registra resultado para uso posterior
-      # Essa verificação evita tentativas desnecessárias de reinstalação
+      register: docker_key
 
     - name: Criação Diretório Docker
       become: true
       ansible.builtin.file:
         path: /etc/apt/keyrings
         state: directory
-        mode: '0755'               # Permissões do diretório
-      when: not docker_key.stat.exists  # Só executa se a chave não existir
-      # Essa condição evita erros de criação de diretório já existente
+        mode: '0755'
+      when: not docker_key.stat.exists
 
     - name: Instalação Chave Docker
       become: true
-      ansible.builtin.shell:
-        cmd: curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc | tee /etc/apt/sources.list.d/docker.list > /dev/null
-      when: not docker_key.stat.exists  # Só executa se a chave não existir
-      # Adiciona a chave GPG oficial do Docker para verificar pacotes
+      ansible.builtin.shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      args:
+        creates: /etc/apt/keyrings/docker.gpg
+      when: not docker_key.stat.exists
 
     - name: Verificação Repositório Docker
       stat:
         path: /etc/apt/sources.list.d/docker.list
-      register: docker_repo         # Registra resultado para uso posterior
-      # Essa verificação evita adicionar repositório duplicado
+      register: docker_repo
 
     - name: Configuração Repositório Docker
       become: true
-      apt_repository:
-        # Adiciona repositório oficial do Docker para a versão do Ubuntu em uso
-        repo: 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable'
+      ansible.builtin.apt_repository:
+        repo: 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable'
         state: present
         filename: docker
-      when: not docker_repo.stat.exists  # Só executa se o repo não existir
-      # Evita adicionar repositório duplicado
+      when: not docker_repo.stat.exists
 
     - name: Instalação Docker
       become: true
       ansible.builtin.apt:
         name: "{{ item }}"
         state: present
-        update_cache: yes          # Atualiza cache do apt antes da instalação
-      loop:  # Pacotes necessários para o Docker funcionar
-        - docker-ce                # Docker Engine
-        - docker-ce-cli            # CLI do Docker
-        - containerd.io            # Runtime de containers
-        - docker-buildx-plugin     # Plugin para build multiplataforma
-        - docker-compose-plugin    # Plugin do Docker Compose
+        update_cache: yes
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-buildx-plugin
+        - docker-compose-plugin
 
     - name: Criação Grupo Docker
       become: true
       ansible.builtin.group:
         name: docker
         state: present
-      # Grupo necessário para executar Docker sem sudo
 
     - name: Configuração Permissões Docker
       become: true
       ansible.builtin.user:
         name: "{{ ansible_user_id }}"
-        groups: docker              # Adiciona ao grupo Docker
-        append: yes                # Mantém grupos existentes
-      # Permite executar Docker sem sudo após reiniciar o shell
+        groups: docker
+        append: yes
 
-    # ===========================================================
-    # Cloud CLI tools
-    # Instalação do AZURE-CLI
-    # ===========================================================
+    # =============================================================================
+    # SEÇÃO 4: Cloud CLI Tools
+    # =============================================================================
     
+    # ======== SEÇÃO 4.1: Microsoft Azure CLI ======== #
+    - name: Verificar instalação Azure CLI
+      ansible.builtin.stat:
+        path: /usr/bin/az
+      register: az_cli_check
+
     - name: Instalação Azure CLI
       become: true
       ansible.builtin.shell: |
-        curl -sL https://aka.ms/InstallAzureCLIDeb | bash 
-      args:
-        creates: /usr/bin/az  # Evita reinstalação se já existir
-      # Instala o Azure CLI usando o script oficial da Microsoft
-   
-    # ===========================================================
-    # Cloud CLI tools
-    # Instalação do AWS-CLI
-    # ===========================================================
+        curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+      when: not az_cli_check.stat.exists
 
+    # ======== SEÇÃO 4.2: Amazon Web Services CLI ======== #
     - name: Verificar instalação AWS CLI
       ansible.builtin.stat:
-        path: /usr/local/bin/aws    # Caminho do binário AWS CLI
-      register: aws_cli_check       # Registra o resultado para uso posterior
-      # Verifica se o AWS CLI já está instalado antes de prosseguir com a instalação
+        path: /usr/local/bin/aws
+      register: aws_cli_check
 
     - name: Download AWS CLI
-      become: true                  # Executa com privilégios de superusuário
+      become: true
       ansible.builtin.get_url:
-        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  # URL oficial do instalador
-        dest: "/tmp/awscliv2.zip"   # Local onde será salvo o arquivo
-        mode: '0644'                # Permissões do arquivo
-      when: not aws_cli_check.stat.exists  # Só executa se AWS CLI não estiver instalado
-      # Faz o download do instalador oficial da AWS CLI v2 em formato ZIP
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        dest: "/tmp/awscliv2.zip"
+        mode: '0644'
+      when: not aws_cli_check.stat.exists
 
     - name: Descompactar AWS CLI
       become: true
       ansible.builtin.unarchive:
-        src: "/tmp/awscliv2.zip"    # Arquivo ZIP baixado
-        dest: "/tmp"                # Diretório de destino
-        remote_src: yes            # Indica que o arquivo está no host remoto
+        src: "/tmp/awscliv2.zip"
+        dest: "/tmp"
+        remote_src: yes
       args:
-        creates: /tmp/aws          # Evita descompactar se o diretório já existir
+        creates: /tmp/aws
       when: not aws_cli_check.stat.exists
-      # Extrai os arquivos do instalador AWS CLI para instalação
 
     - name: Instalar AWS CLI
       become: true
       ansible.builtin.command:
-        cmd: "/tmp/aws/install"     # Comando de instalação
+        cmd: "/tmp/aws/install"
       when: not aws_cli_check.stat.exists
-      # Executa o script de instalação da AWS CLI somente se não estiver instalado
+
+    # ======== SEÇÃO 4.3: Google Cloud Platform CLI ======== #
+    - name: Verificar instalação Google Cloud CLI
+      ansible.builtin.stat:
+        path: /usr/bin/gcloud
+      register: gcloud_cli_check
+
+    - name: Adicionar chave GPG do Google Cloud
+      become: true
+      ansible.builtin.shell: |
+        curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+      args:
+        creates: /usr/share/keyrings/cloud.google.gpg
+
+    - name: Adicionar repositório Google Cloud
+      become: true
+      ansible.builtin.shell: |
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
+      args:
+        creates: /etc/apt/sources.list.d/google-cloud-sdk.list
+
+    - name: Atualizar cache do APT
+      become: true
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Instalar Google Cloud CLI
+      become: true
+      ansible.builtin.apt:
+        name: google-cloud-sdk
+        state: present
+      when: not gcloud_cli_check.stat.exists
 ...
