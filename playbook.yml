@@ -51,6 +51,9 @@
         - pandoc
         - dconf-cli
         - python3-pip
+        - gnupg
+        - apt-transport-https
+        - ca-certificates
 
     # =============================================================================
     # SEÇÃO 2: ZSH e Oh-My-ZSH
@@ -120,7 +123,7 @@
     # =============================================================================
     # SEÇÃO 3: Docker Engine e Docker Compose
     # =============================================================================
-
+    
     - name: Verificação Chave Docker
       stat:
         path: /etc/apt/keyrings/docker.asc
