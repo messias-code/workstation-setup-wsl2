@@ -1,0 +1,95 @@
+- name: Reverter Configuração do Ambiente
+  hosts: localhost
+  become: true
+  tasks:
+    # =============================================================================
+    # SEÇÃO 01: Remover Pacotes Gerais
+    # =============================================================================
+    - name: Remover pacotes instalados
+      ansible.builtin.shell: |
+        for package in git curl wget neovim zsh texlive texlive-latex-extra texlive-xetex texlive-fonts-recommended texlive-plain-generic pandoc dconf-cli python3-pip; do
+          if dpkg -l | grep -q $package; then
+            sudo apt-get remove --purge -y $package
+          else
+            echo "Pacote $package não está instalado."
+          fi
+        done
+
+    # ============================================================================================================
+    # SEÇÃO 02: Restaurar Shell Padrão para Bash - Remover Oh-My-ZSH, Arquivos de Configuração e Histórico do ZSH
+    # ============================================================================================================
+    - name: Restaurar shell padrão para bash
+      ansible.builtin.shell: |
+        chsh -s /bin/bash $USER
+
+    - name: Remover Oh-My-ZSH, .zshrc e histórico do ZSH
+      ansible.builtin.shell: |
+        rm -rf /home/{{ ansible_env.USER }}/.oh-my-zsh
+        rm -f /home/{{ ansible_env.USER }}/.zshrc
+        rm -f /home/{{ ansible_env.USER }}/.zsh_history
+
+    # =============================================================================
+    # SEÇÃO 03: Remover Docker e Suas Configurações
+    # =============================================================================
+    - name: Remover Docker e suas configurações
+      ansible.builtin.shell: |
+        for package in docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; do
+          if dpkg -l | grep -q $package; then
+            sudo apt-get remove --purge -y $package
+          else
+            echo "Pacote $package não está instalado."
+          fi
+        done
+        sudo rm -rf /etc/apt/keyrings/docker.gpg /etc/apt/sources.list.d/docker.list
+        sudo rm -rf /var/lib/docker /var/lib/containerd
+        sudo rm -rf /etc/docker
+        sudo groupdel docker
+
+    # =============================================================================
+    # SEÇÃO 04: Remover Kubernetes e Suas Configurações
+    # =============================================================================
+    - name: Remover Kubernetes e suas configurações
+      ansible.builtin.shell: |
+        sudo apt-get remove --purge -y kubelet kubeadm kubectl
+        sudo rm -f /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        sudo rm -f /etc/apt/sources.list.d/kubernetes.list
+        sudo rm -rf /usr/local/bin/kubectl
+        sudo rm -rf /etc/kubernetes
+        sudo rm -rf /var/lib/kubelet
+        sudo rm -rf /etc/systemd/system/kubelet.service.d
+        sudo rm -rf /etc/systemd/system/kubeadm.service.d
+
+    # =============================================================================
+    # SEÇÃO 05: Remover Cloud CLI Tools
+    # =============================================================================
+    - name: Remover Azure CLI
+      ansible.builtin.shell: |
+        sudo apt remove --purge -y azure-cli
+        sudo rm -rf /etc/apt/sources.list.d/azure-cli.list
+        sudo rm -rf /etc/apt/keyrings/microsoft.asc
+
+    - name: Remover AWS CLI
+      ansible.builtin.shell: |
+        sudo apt remove --purge awscli
+        sudo rm -rf /usr/local/aws-cli /usr/local/bin/aws
+        sudo rm -rf /tmp/awscliv2.zip /tmp/aws
+
+    - name: Remover Google Cloud CLI
+      ansible.builtin.shell: |
+        sudo apt remove --purge -y google-cloud-sdk
+        sudo rm -rf /usr/share/keyrings/cloud.google.gpg /etc/apt/sources.list.d/google-cloud-sdk.list
+        sudo rm -rf /usr/lib/google-cloud-sdk
+
+    # =============================================================================
+    # SEÇÃO 06: Atualizar Cache do APT e Limpar Dependências Não Utilizadas
+    # =============================================================================
+    - name: Atualizar cache do APT
+      ansible.builtin.shell: sudo apt clean && sudo apt update
+
+    - name: Executar autoremove para limpar dependências não utilizadas
+      ansible.builtin.shell: sudo apt autoremove -y
+
+    - name: Mensagem de conclusão do processo de reversão
+      ansible.builtin.debug:
+        msg: "Processo de reversão concluído!"
+...
