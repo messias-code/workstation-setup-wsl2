@@ -158,6 +158,12 @@
         filename: docker
       when: not docker_repo.stat.exists
 
+    - name: Atualizar cache APT
+      become: true
+      ansible.builtin.apt:
+        update_cache: yes
+        autoremove: yes
+
     - name: Instalação Docker
       become: true
       ansible.builtin.apt:
@@ -189,19 +195,34 @@
     # =============================================================================
     
     # ======== SEÇÃO 4.1: containerd ======== #
+    - name: Verificar se containerd já está instalado
+      become: true
+      ansible.builtin.shell: |
+        dpkg-query -W -f='${Status}' containerd.io
+      register: containerd_status
+      failed_when: false
+      changed_when: false
+
     - name: Instalar containerd
       become: true
       ansible.builtin.apt:
         name: containerd
         state: present
+      when: "'install ok installed' not in containerd_status.stdout"
 
-    - name: Configurar containerd
+    - name: Verificar se a configuração do containerd já existe
+      ansible.builtin.stat:
+        path: /etc/containerd/config.toml
+      register: containerd_config
+
+    - name: Gerar e aplicar configuração padrão para o containerd
       become: true
       ansible.builtin.shell: |
         mkdir -p /etc/containerd
         containerd config default | tee /etc/containerd/config.toml
         systemctl restart containerd
         systemctl enable containerd
+      when: not containerd_config.stat.exists
 
     # ======== SEÇÃO 4.2: helm ======== #
     - name: Verificar se o Helm está instalado
@@ -217,47 +238,81 @@
         sudo mv /tmp/linux-amd64/helm /usr/local/bin/helm
       when: not helm_check.stat.exists
 
+    - name: Verificar se o repositório Helm já está configurado
+      command: helm repo list -o json
+      register: helm_repos
+      failed_when: false
+      changed_when: false
+
     - name: Configurar Helm Repositórios
-      become: true
       ansible.builtin.shell: |
         helm repo add stable https://charts.helm.sh/stable
         helm repo update
+      when: "'stable' not in helm_repos.stdout | from_json | map(attribute='name') | list"
+
 
     # ======== SEÇÃO 4.3: k9s ======== #
+    - name: Verificar se o k9s já está instalado
+      stat:
+        path: /usr/local/bin/k9s
+      register: k9s_status
+
     - name: Instalar k9s
       become: true
       ansible.builtin.shell: |
         curl -sS https://webinstall.dev/k9s | bash
+      when: not k9s_status.stat.exists
 
     - name: Mover k9s para /usr/local/bin/
       become: true
       ansible.builtin.shell: |
         mv ~/.local/opt/k9s-v0.32.7/bin/k9s /usr/local/bin/k9s
+      when: not k9s_status.stat.exists
 
     - name: Verificar instalação do k9s
-      ansible.builtin.command: k9s version
+      ansible.builtin.shell: |
+        k9s version
       register: k9s_version
       failed_when: false
       changed_when: false
 
     # ======== SEÇÃO 4.4: minikube ======== #
+    - name: Verificar se Minikube está instalado
+      ansible.builtin.shell: | 
+        minikube version
+      register: minikube_status
+      failed_when: false
+      changed_when: false
+
     - name: Instalar Minikube
-      become: true
-      ansible.builtin.shell: |
-        curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-        sudo chmod +x minikube
-        sudo mv minikube /usr/local/bin/
+      get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        dest: /usr/local/bin/minikube
+        mode: '0755'
+      when: "'minikube' not in minikube_status.stdout"
 
     # ======== SEÇÃO 4.5: kubeadm, kubelet, kubectl ======== #
+    - name: Verificar se o arquivo da chave pública já existe
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      register: kubernetes_keyring
+
     - name: Baixar chave pública do repositório Kubernetes
       become: true
       ansible.builtin.shell: |
         yes | curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      when: not kubernetes_keyring.stat.exists
+
+    - name: Verificar se o repositório Kubernetes já está configurado
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/kubernetes.list
+      register: kubernetes_repo
 
     - name: Adicionar repositório Kubernetes
       become: true
       ansible.builtin.shell: |
         echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
+      when: not kubernetes_repo.stat.exists
 
     - name: Atualizar o índice de pacotes
       become: true
@@ -273,9 +328,16 @@
           - kubectl
         state: present
 
+    - name: Verificar se kubeadm, kubelet e kubectl já estão com hold
+      shell: apt-mark showhold | grep -E 'kubeadm|kubelet|kubectl'
+      register: hold_status
+      failed_when: false
+      changed_when: false
+
     - name: Marcar kubeadm, kubelet e kubectl para não serem atualizados automaticamente
       become: true
       ansible.builtin.shell: apt-mark hold kubeadm kubelet kubectl
+      when: hold_status.stdout == ""
 
     # =============================================================================
     # SEÇÃO 5: Cloud CLI Tools
@@ -299,14 +361,6 @@
         path: /usr/local/bin/aws
       register: aws_cli_check
 
-    - name: Download AWS CLI
-      become: true
-      ansible.builtin.get_url:
-        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-        dest: "/tmp/awscliv2.zip"
-        mode: '0644'
-      when: not aws_cli_check.stat.exists
-
     - name: Descompactar AWS CLI
       become: true
       ansible.builtin.unarchive:
@@ -319,9 +373,19 @@
 
     - name: Instalar AWS CLI
       become: true
-      ansible.builtin.command:
-        cmd: "/tmp/aws/install"
+      ansible.builtin.shell: |
+        /tmp/aws/install
       when: not aws_cli_check.stat.exists
+      # when: not aws_cli_check.stat.exists ansible.builtin.stat:
+      #   path: /usr/local/bin/aws
+      # register: aws_cli_check
+
+    - name: Download AWS CLI
+      become: true
+      ansible.builtin.get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        dest: "/tmp/awscliv2.zip"
+        mode: '0644'
 
     # ======== SEÇÃO 5.3: Google Cloud Platform CLI ======== #
     - name: Verificar instalação Google Cloud CLI
