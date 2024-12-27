@@ -48,7 +48,7 @@ Este é um projeto em constante evolução que visa criar um ambiente completo p
 - [x] Oh-My-ZSH com Powerlevel10K e plugins
 - [x] Docker Engine e Docker Compose
 - [x] Cloud CLI tools (aws-cli, azure-cli, gcloud)
-- [ ] Kubernetes tools (kubectl, helm, k9s) - **Em breve**
+- [x] Kubernetes tools (containerd, helm, k9s, minikube, kubeadm, kubelet e kubectl)
 - [ ] Terraform e outras ferramentas IaC - **Em breve**
 
 > 🔄 *Este projeto está em desenvolvimento ativo. Novas features são adicionadas regularmente.*
