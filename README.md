@@ -71,7 +71,17 @@ O playbook realiza as seguintes configurações:
    - Configuração de permissões e grupos
    - Instalação do Docker Compose
 
-4. Cloud CLI tools
+4. Kubernetes
+   - Instalação completa do Kubernetes e seus recursos
+   - containerd
+   - helm
+   - k9s
+   - minikube
+   - kubeadm
+   - kubelet
+   - kubectl
+
+5. Cloud CLI tools
    - Instalação do azure-cli
    - Instalação do aws-cli
    - Instalação do gcloud
