@@ -285,6 +285,7 @@
       changed_when: false
 
     - name: Instalar Minikube
+      become: true
       get_url:
         url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
         dest: /usr/local/bin/minikube
@@ -356,10 +357,28 @@
       when: not az_cli_check.stat.exists
 
     # ======== SEÇÃO 5.2: Amazon Web Services CLI ======== #
-    - name: Verificar instalação AWS CLI
+    - name: Verificar se AWS CLI já está instalado
+      ansible.builtin.shell: |
+        aws --version
+      register: aws_cli_installed
+      failed_when: false
+      changed_when: false
+
+    - name: Verificar se o arquivo ZIP do AWS CLI já foi baixado
       ansible.builtin.stat:
-        path: /usr/local/bin/aws
-      register: aws_cli_check
+        path: "/tmp/awscliv2.zip"
+      register: aws_zip_check
+      when: "'aws-cli' not in aws_cli_installed.stdout"
+
+    - name: Baixar AWS CLI
+      become: true
+      ansible.builtin.get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        dest: "/tmp/awscliv2.zip"
+        mode: '0644'
+      when: 
+        - "'aws-cli' not in aws_cli_installed.stdout"
+        - not aws_zip_check.stat.exists
 
     - name: Descompactar AWS CLI
       become: true
@@ -369,23 +388,13 @@
         remote_src: yes
       args:
         creates: /tmp/aws
-      when: not aws_cli_check.stat.exists
+      when: "'aws-cli' not in aws_cli_installed.stdout"
 
     - name: Instalar AWS CLI
       become: true
       ansible.builtin.shell: |
         /tmp/aws/install
-      when: not aws_cli_check.stat.exists
-      # when: not aws_cli_check.stat.exists ansible.builtin.stat:
-      #   path: /usr/local/bin/aws
-      # register: aws_cli_check
-
-    - name: Download AWS CLI
-      become: true
-      ansible.builtin.get_url:
-        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-        dest: "/tmp/awscliv2.zip"
-        mode: '0644'
+      when: "'aws-cli' not in aws_cli_installed.stdout"
 
     # ======== SEÇÃO 5.3: Google Cloud Platform CLI ======== #
     - name: Verificar instalação Google Cloud CLI
