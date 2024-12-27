@@ -1,112 +1,114 @@
 #!/bin/bash
 
-# Função para imprimir mensagens
-print_message() {
-    echo "========================================"
-    echo "$1"
-    echo "========================================"
+# Colors
+GREEN="\033[1;32m"
+RED="\033[1;31m"
+YELLOW="\033[1;33m"
+BLUE="\033[1;34m"
+RESET="\033[0m"
+
+# Utility functions
+show_step() {
+  echo -e "${BLUE}========================================${RESET}"
+  echo -e "${YELLOW}$1${RESET}"
+  echo -e "${BLUE}========================================${RESET}"
 }
 
-# Restaurar shell padrão para bash
-print_message "Restaurando shell padrão para bash"
-chsh -s /bin/bash $USER
+show_status() {
+  if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✔ $1 concluído com sucesso.${RESET}"
+  else
+    echo -e "${RED}✘ $1 falhou.${RESET}"
+  fi
+}
 
-# Remover Oh-My-ZSH, arquivos de configuração e histórico
-print_message "Removendo Oh-My-ZSH, .zshrc e histórico do ZSH"
-rm -rf /home/$USER/.oh-my-zsh
-rm -f /home/$USER/.zshrc
-rm -f /home/$USER/.zsh_history
+prompt_for_sudo() {
+  echo -e "${YELLOW}O script precisará de privilégios administrativos.${RESET}"
+  sudo -v || (echo -e "${RED}Falha ao autenticar como administrador. Encerrando o script.${RESET}" && exit 1)
+}
 
-# Remover pacotes gerais
-print_message "Removendo pacotes instalados"
-PACKAGES=("git" "curl" "wget" "neovim" "zsh" "texlive" "texlive-latex-extra" "texlive-xetex" "texlive-fonts-recommended" "texlive-plain-generic" "pandoc" "dconf-cli" "python3-pip")
-for package in "${PACKAGES[@]}"; do
-    if dpkg -l | grep -q "$package"; then
-        sudo apt-get remove --purge -y "$package"
-    else
-        echo "Pacote $package não está instalado."
-    fi
-done
+# Main rollback logic
+rollback() {
+  # Solicitação de senha no início
+  prompt_for_sudo
 
-# Remover Docker e suas configurações
-print_message "Removendo Docker e suas configurações"
-DOCKER_PACKAGES=("docker-ce" "docker-ce-cli" "containerd.io" "docker-buildx-plugin" "docker-compose-plugin")
-for package in "${DOCKER_PACKAGES[@]}"; do
-    if dpkg -l | grep -q "$package"; then
-        sudo apt-get remove --purge -y "$package"
-    else
-        echo "Pacote $package não está instalado."
-    fi
-done
-sudo rm -rf /etc/apt/keyrings/docker.asc
-sudo rm -rf /etc/apt/sources.list.d/docker.list
-sudo rm -rf /var/lib/docker /var/lib/containerd
-sudo rm -rf /etc/docker
-sudo groupdel docker || echo "Grupo 'docker' não existe."
+  show_step "Restaurando shell padrão para bash"
+  sudo chsh -s /bin/bash $USER
+  show_status "Restaurar shell"
 
-# Remover interfaces de rede do Docker
-print_message "Removendo interfaces de rede do Docker"
-if ip link show docker0 &>/dev/null; then
-    sudo ip link delete docker0
-else
-    echo "Interface docker0 não encontrada."
-fi
+  show_step "Removendo Oh-My-ZSH e configurações ZSH"
+  rm -rf ~/.oh-my-zsh ~/.zshrc ~/.zsh_history
+  show_status "Remover Oh-My-ZSH e configurações"
 
-# Remover Kubernetes e suas configurações
-print_message "Removendo Kubernetes e suas configurações"
-sudo systemctl stop kubelet
-sudo systemctl disable kubelet
-sudo apt-mark unhold kubelet kubeadm kubectl
-sudo apt-get remove --purge -y --allow-change-held-packages kubelet kubeadm kubectl
-sudo rm -f /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-sudo rm -f /etc/apt/sources.list.d/kubernetes.list
-sudo rm -rf /usr/local/bin/kubectl
-sudo rm -rf /etc/kubernetes /var/lib/kubelet
-sudo rm -rf /home/$USER/.minikube /usr/local/bin/minikube
-sudo systemctl daemon-reload
+  show_step "Removendo pacotes instalados"
+  local packages=("git" "curl" "wget" "neovim" "zsh" "texlive" "texlive-latex-extra" "texlive-xetex" "texlive-fonts-recommended" "texlive-plain-generic" "pandoc" "dconf-cli" "python3-pip")
+  for package in "${packages[@]}"; do
+    echo -e "${YELLOW}Removendo $package...${RESET}"
+    sudo apt-get purge -y "$package" --quiet
+    show_status "Remover $package"
+  done
 
-# Remover Azure CLI
-print_message "Removendo Azure CLI"
-sudo apt remove --purge -y azure-cli
-sudo rm -rf /etc/apt/sources.list.d/azure-cli.list
-sudo rm -rf /etc/apt/keyrings/microsoft.asc
+  show_step "Removendo Docker e suas configurações"
+  local docker_packages=("docker-ce" "docker-ce-cli" "containerd.io" "docker-buildx-plugin" "docker-compose-plugin")
+  for package in "${docker_packages[@]}"; do
+    echo -e "${YELLOW}Removendo $package...${RESET}"
+    sudo apt-get purge -y "$package" --quiet
+    show_status "Remover $package"
+  done
+  sudo rm -rf /etc/apt/keyrings/docker.asc /etc/apt/sources.list.d/docker.list /var/lib/docker /var/lib/containerd /etc/docker
+  sudo groupdel docker 2>/dev/null || echo -e "${RED}Grupo 'docker' não existe.${RESET}"
 
-# Remover AWS CLI
-print_message "Removendo AWS CLI"
-sudo apt remove --purge -y awscli
-sudo rm -rf /usr/local/aws-cli /usr/local/bin/aws
-sudo rm -rf /tmp/awscliv2.zip /tmp/aws
+  show_step "Removendo Kubernetes e suas configurações"
+  sudo systemctl stop kubelet
+  sudo systemctl disable kubelet
+  sudo apt-mark unhold kubelet kubeadm kubectl
+  sudo apt-get purge -y --allow-change-held-packages kubelet kubeadm kubectl
+  sudo rm -rf /etc/apt/keyrings/kubernetes-apt-keyring.gpg /etc/apt/sources.list.d/kubernetes.list /usr/local/bin/kubectl /etc/kubernetes /var/lib/kubelet
+  sudo rm -rf ~/.minikube /usr/local/bin/minikube
+  sudo systemctl daemon-reload
+  show_status "Remover Kubernetes"
 
-# Remover Google Cloud CLI
-print_message "Removendo Google Cloud CLI"
-if snap list | grep -q "google-cloud-sdk"; then
+  show_step "Removendo Azure CLI"
+  sudo apt-get purge -y azure-cli
+  sudo rm -rf /etc/apt/sources.list.d/azure-cli.list /etc/apt/keyrings/microsoft.asc
+  show_status "Remover Azure CLI"
+
+  show_step "Removendo AWS CLI"
+  sudo apt-get purge -y awscli
+  sudo rm -rf /usr/local/aws-cli /usr/local/bin/aws /tmp/awscliv2.zip /tmp/aws
+  show_status "Remover AWS CLI"
+
+  show_step "Removendo Google Cloud CLI"
+  if snap list | grep -q "google-cloud-sdk"; then
     sudo snap remove google-cloud-sdk
-else
-    echo "Google Cloud CLI não está instalado via Snap."
-fi
+  else
+    echo -e "${RED}Google Cloud CLI não está instalado via Snap.${RESET}"
+  fi
+  show_status "Remover Google Cloud CLI"
 
-# Atualizar cache do APT
-print_message "Atualizando cache do APT"
-sudo apt clean && sudo apt update
+  show_step "Atualizando cache APT"
+  sudo apt-get clean && sudo apt-get update --quiet
+  show_status "Atualizar cache APT"
 
-# Executar autoremove para limpar dependências não utilizadas
-print_message "Executando autoremove"
-sudo apt autoremove -y
+  show_step "Executando autoremove"
+  sudo apt-get autoremove -y --quiet
+  show_status "Autoremove"
 
-# Limpar pacotes residuais
-print_message "Limpando pacotes residuais"
-sudo apt-get purge -y $(dpkg -l | awk '/^rc/ { print $2 }') || echo "Nenhum pacote residual encontrado."
+  show_step "Limpando pacotes residuais"
+  sudo apt-get purge -y $(dpkg -l | awk '/^rc/ { print $2 }') || echo -e "${GREEN}Nenhum pacote residual encontrado.${RESET}"
+  show_status "Limpeza de pacotes residuais"
 
-# Verificação final
-print_message "Verificando remoção completa"
-dpkg -l | grep -E "kubectl|docker|zsh|oh-my-zsh"
-systemctl list-units | grep -E "docker|kubelet|minikube"
-for dir in ~/.minikube /usr/local/bin/minikube /var/lib/docker /etc/docker /etc/kubernetes ~/.oh-my-zsh; do
+  show_step "Verificação final"
+  for dir in ~/.minikube /usr/local/bin/minikube /var/lib/docker /etc/docker /etc/kubernetes ~/.oh-my-zsh; do
     if [ -e "$dir" ]; then
-        echo "$dir ainda existe."
+      echo -e "${RED}$dir ainda existe.${RESET}"
     else
-        echo "$dir foi removido."
+      echo -e "${GREEN}$dir foi removido.${RESET}"
     fi
-done
+  done
 
-print_message "Script concluído!"
+  echo -e "${BLUE}Rollback concluído.${RESET}"
+}
+
+# Run rollback
+rollback
