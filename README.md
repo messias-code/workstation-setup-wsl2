@@ -132,6 +132,37 @@ cd workstation-setup-wsl2
    - Selecione seu perfil do Ubuntu
    - Em "Aparência"
    - Mude a fonte para "MesloLGS NF"
+   
+4. Configure o tema Catppuccin Mocha:
+   - Abra as Configurações (Ctrl+,)
+   - Clique em "Abrir arquivo JSON"
+   - Adicione o seguinte esquema de cores na seção "schemes":
+   ```json
+   {
+     "name": "Catppuccin Mocha",
+     "cursorColor": "#F5E0DC",
+     "selectionBackground": "#585B70",
+     "background": "#1E1E2E",
+     "foreground": "#CDD6F4",
+     "black": "#45475A",
+     "red": "#F38BA8",
+     "green": "#A6E3A1",
+     "yellow": "#F9E2AF",
+     "blue": "#89B4FA",
+     "purple": "#F5C2E7",
+     "cyan": "#94E2D5",
+     "white": "#BAC2DE",
+     "brightBlack": "#585B70",
+     "brightRed": "#F38BA8",
+     "brightGreen": "#A6E3A1",
+     "brightYellow": "#F9E2AF",
+     "brightBlue": "#89B4FA",
+     "brightPurple": "#F5C2E7",
+     "brightCyan": "#94E2D5",
+     "brightWhite": "#A6ADC8"
+   }
+   ```
+   - No seu perfil do Ubuntu, defina o esquema de cores como "Catppuccin Mocha"
 
 ## 📦 Uso
 
