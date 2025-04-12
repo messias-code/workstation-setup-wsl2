@@ -263,11 +263,16 @@
         curl -sS https://webinstall.dev/k9s | bash
       when: not k9s_status.stat.exists
 
-    - name: Mover k9s para /usr/local/bin/
+    - name: Verificar binário real do k9s
+      stat:
+        path: "{{ ansible_env.HOME }}/.local/share/k9s/current/k9s"
+      register: k9s_real
+
+    - name: Mover k9s real para /usr/local/bin/
       become: true
       ansible.builtin.shell: |
-        mv ~/.local/opt/k9s-v0.32.7/bin/k9s /usr/local/bin/k9s
-      when: not k9s_status.stat.exists
+        mv {{ ansible_env.HOME }}/.local/share/k9s/current/k9s /usr/local/bin/k9s
+      when: not k9s_status.stat.exists and k9s_real.stat.exists
 
     - name: Verificar instalação do k9s
       ansible.builtin.shell: |
