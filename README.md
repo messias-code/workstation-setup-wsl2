@@ -1,7 +1,7 @@
 # 💻⚙️ Configuração da estação de trabalho WSL2
 
 <p align="center">
-  <img src="./assets/CODE-ACADEMY-WSL2.png" alt="code-academy-banner">
+  <img src="https://github.com/user-attachments/assets/13caef7e-657a-4c5f-8d98-fc366ac0f39e" alt="codeverso-academy" width="450">
 </p>
 
 > Automatização para configuração de ambiente de desenvolvimento no WSL2 Ubuntu, utilizando Ansible para agilizar e padronizar a instalação de ferramentas e configurações essenciais para profissionais DevOps.
@@ -216,6 +216,6 @@ Para suporte ou questões relacionadas ao projeto, entre em contato através dos
 [![LinkedIn Badge](https://img.shields.io/static/v1?style=for-the-badge&message=LinkedIn&color=0A66C2&logo=LinkedIn&logoColor=FFFFFF&label=)](https://www.linkedin.com/in/ihanmessias/)
 [![Instagram Badge](https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/messias.code)
 
-<p align="center">✉ Email de Projetos: messias.devops@gmail.com</p>
+<p align="center">✉ Email de Projetos: codeverso@hotmail.com</p>
 
-<p align="center">© CodeAcademy</p>
+<p align="center">© CodeVerso Academy</p>
